@@ -1,15 +1,17 @@
 {
     "name": "daumling/dataset",
     "description": "A JSON-based, SQL-like manipulation of structured data",
-    "require-dev": {
+    "type": "package",
+    "require": {
+        "php": ">=7.2.0"
     },
+    "license": "mit",
     "authors": [
         {
             "name": "Michael Daumling",
             "email": "github@daumling.com"
         }
     ],
-    "require": {},
     "autoload": {
         "psr-4": {"Daumling\\Dataset\\": "src/"}
     }
