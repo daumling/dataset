@@ -1,8 +1,6 @@
 {
     "name": "daumling/dataset",
     "description": "A JSON-based, SQL-like manipulation of structured data",
-    "version": "1.0.0",
-    "type": "library",
     "require-dev": {
     },
     "authors": [
