@@ -1,2 +1,2 @@
-/vendor/
-/.vscode/y
+.*
+!/.gitignore
