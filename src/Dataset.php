@@ -181,7 +181,7 @@ class Dataset implements \Countable {
      */
     function first() : ?object {
         $this->_load();
-        if (empty($data))
+        if (empty($this->data))
             return null;
         return $this->data[array_key_first($this->data)];
     }
@@ -192,7 +192,7 @@ class Dataset implements \Countable {
      */
     function last() : ?object {
         $this->_load();
-        if (empty($data))
+        if (empty($this->data))
             return null;
         return $this->data[array_key_last($this->data)];
     }
