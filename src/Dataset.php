@@ -50,7 +50,7 @@ class Dataset implements \Countable {
      * @param bool $modified the modified flag
      * @return Dataset myself
      */
-    function set($data, bool $modified = false) : Dataset {
+    function set($data, bool $modified = true) : Dataset {
         if ($data instanceof Dataset)
             $data = $data->data;
         $this->data = (array) $data;
