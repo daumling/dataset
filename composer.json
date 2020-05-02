@@ -14,6 +14,6 @@
         }
     ],
     "autoload": {
-        "psr-4": {"Daumling\\": "src/"}
+        "psr-4": {"Daumling\\Dataset\\": "src/"}
     }
 }
