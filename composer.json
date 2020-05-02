@@ -1,10 +1,11 @@
 {
-    "name": "daumling/dataset",
-    "description": "A JSON-based, SQL-like manipulation of structured data",
+    "name": "daumling/php-dataset",
+    "description": "A JSON-based, SQL-like manipulation of structured PHP data",
     "type": "package",
     "require": {
         "php": ">=7.2.0"
     },
+    "minimum-stability": "dev",
     "license": "mit",
     "authors": [
         {
