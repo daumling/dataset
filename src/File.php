@@ -6,7 +6,15 @@ require_once 'Dataset.php';
 require_once 'Exception.php';
 
 /**
- * A File is a dataset that is backed up to disk.
+ * A File is a dataset that is backed up by disk storage.
+ * 
+ * Due to the nature of JSON, associative arrays are stored as objects.
+ * If an object is loaded, the code checks the object's properties for
+ * being arrays or objects. If all property values are non-scalar, the
+ * object is loaded as an associative array, mimicking indexed storage
+ * of objects. If a property value is scalar, however, the entire object
+ * is loaded as a single entry. If you save such an object, it will also
+ * be saved as a single-element array.
  */
 class File extends Dataset {
     /**
@@ -164,7 +172,10 @@ class File extends Dataset {
     }
 
     /**
-     * Overloadable: Load the data from disk.
+     * Overloadable: Load the data from disk. Note that if the
+     * data is an object, the property names will only become keys
+     * if all property values are either arrays or objects. Otherwise,
+     * the JSON will be stored as a single object.
      * @throws Exception if the loaded JSON is invalid
      */
     protected function _load() : void {
@@ -172,13 +183,22 @@ class File extends Dataset {
             return;
         $json = is_file($this->path) ? @file_get_contents($this->path) : null;
         if ($json) {
-            $json = @json_decode($json);
+            $json = @json_decode($json, false);
             if (is_null($json))
                 throw new Exception("File $this->path does not contain valid JSON");
+            if (is_object($json)) {
+                foreach ($json as $value) {
+                    if (is_scalar($value)) {
+                        // must be a single object
+                        $this->data = [$json];
+                        return;
+                    }
+                }
+            }
+            $this->data = (array) $json;
         }
         else
-            $json = [];
-        $this->data = (array) $json;
+            $this->data = [];
     }
     
     /**
@@ -193,7 +213,7 @@ class File extends Dataset {
             $dir = dirname($this->path);
             if (!is_dir($dir) && !mkdir($dir, 0777, true))
                 throw new Exception("Cannot create folder $dir");
-            else if (!file_put_contents($this->path, json_encode($this->data, $this->options['flags'])))
+            if (!file_put_contents($this->path, json_encode($this->data, $this->options['flags'])))
                 throw new Exception('Cannot write file '.$this->path);
         }
         $this->modified = false;

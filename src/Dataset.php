@@ -44,17 +44,24 @@ class Dataset implements \Countable {
     }
 
     /**
-     * Replace the entire dataset with either structured data
-     * or the contents of a Dataset.
+     * Replace the entire dataset with the supplied data. If the
+     * data is an object, the data is stored as a single element
+     * of the dataset. If the data is an array, it is stored as-is
+     * including the array keys.
      * @param array|object|Dataset $data the data to set
      * @param bool $modified the modified flag
      * @return Dataset myself
      */
     function set($data, bool $modified = true) : Dataset {
         if ($data instanceof Dataset)
-            $data = $data->data;
-        $this->data = (array) $data;
-        $this->modified = $modified;
+            $this->data = $data->data;
+        else if (is_object($data))
+            $this->data = [$data];
+        else if (is_array($data))
+            $this->data = $data;
+        else
+            throw new Exception("Cannot set scalar data");
+        $this->_setModified($modified);
         $this->_autoflush();
         return $this;
     }
@@ -81,7 +88,7 @@ class Dataset implements \Countable {
             $data[$key] = &$record;
         }
         $this->data = $data;
-        $this->modified = true;
+        $this->_setModified(true);
         return $this;
     }
 
@@ -100,7 +107,7 @@ class Dataset implements \Countable {
      * @param bool $flag
      */
     function setModified(bool $flag) : void {
-        $this->modified = $flag;
+        $this->_setModified($flag);
         $this->_autoflush();
     }
 
@@ -282,7 +289,7 @@ class Dataset implements \Countable {
      * Fetch the dataset and return it.
      * @return array
      */
-    function fetch() {
+    function fetch() : array {
         $this->_load();
         return $this->data;
     }
@@ -297,31 +304,41 @@ class Dataset implements \Countable {
      */
     function insert($data, ?string $key = null) : Dataset {
         $this->_load();
-        if (!is_null($key))
+        if (is_null($key))
             $key = max(array_keys($this->data));
         $this->data[$key] = &$data;
+        $this->_setModified(true);
         $this->_autoflush();
         return $this;
     }
 
     /**
      * Update a dataset. The data is either an object or an array
-     * whose data is merged into the existing dataset. The update
+     * whose data is merged into each record of this dataset. The update
      * operation also affects all parent datasets, causing the file
      * to be updated at the end if autoflush is enabled. Note that
-     * nothing happens if the dataset is empty.
+     * nothing happens if the dataset is empty. Also, scalar dataset
+     * values are not updated.
      * @param array|object $data
      * @return Dataset
      */
     function update($data) : Dataset {
         $data = (array) $data;
         $this->_load();
+        $modified = false;
         foreach ($this->data as &$val) {
-            if (is_array($val))
+            if (is_array($val)) {
                 $val = array_merge($val, $data);
-            else foreach ($data as $k => $v)
-                $val->$k = $v;
+                $modified = true;
+            }
+            else if (is_object($val)) {
+                foreach ($data as $k => $v)
+                    $val->$k = $v;
+                $modified = true;
+            }
         }
+        if ($modified)
+            $this->_setModified($modified);
         $this->_autoflush();
         return $this;
     }
@@ -388,7 +405,7 @@ class Dataset implements \Countable {
                 return ($mode === 'desc') ? -$res : $res;
             });
         }
-        $this->modified = true;
+        $this->_setModified(true);
         $this->_autoflush();
         return $this;
     }
@@ -415,7 +432,7 @@ class Dataset implements \Countable {
                     unset($ds->data[$k]);
             }
         }
-        $this->modified = true;
+        $this->_setModified(true);
         $this->_autoflush();
         return $this;
     }
@@ -442,6 +459,15 @@ class Dataset implements \Countable {
      * Overloadable: flush the data to disk.
      */
     protected function _flush(): void {
+    }
+
+    /**
+     * Helper: set the modified flag at this instance and all parents.
+     * @param bool $flag
+     */
+    protected function _setModified(bool $flag) : void {
+        for ($ds = $this; $ds; $ds = $ds->parent)
+            $ds->modified = $flag;
     }
 
     /**

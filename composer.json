@@ -1,12 +1,12 @@
 {
     "name": "daumling/php-dataset",
     "description": "A JSON-based, SQL-like manipulation of structured PHP data",
-    "type": "package",
+    "type": "library",
+    "version": "1.0.0",
     "require": {
         "php": ">=7.2.0"
     },
-    "minimum-stability": "stable",
-    "license": "mit",
+    "license": "MIT",
     "authors": [
         {
             "name": "Michael Daumling",
