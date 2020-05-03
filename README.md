@@ -37,3 +37,23 @@ Or if you only need NY retirees:
 ```php
 foreach ($file->where('age', '>=', 65)->where('address.state' '=', 'NY')->fetch() as $record) ...
 ```
+
+## Installation
+
+The easiest way to install and use Datasets is `composer`:
+
+  `composer require daumling/php-dataset`
+
+Your PHP file could look like this:
+
+```php
+require_once __DIR__.'/vendor/autoload.php';
+use \Daumling\Dataset\File as DB;
+
+// set the path
+DB::setOptions([
+    'path' => __DIR__.'/data/*.json'
+]);
+// Open data/addresses.json
+$file = DB::get('addresses');
+```
