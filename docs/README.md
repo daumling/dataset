@@ -1,6 +1,6 @@
 # Datasets
 
-**See the entire documentation at https://daumling.github.io/php-dataset**!
+**See the entire documentation at https://daumling.github.io/php-dataset/**!
 
 I was looking for a simple way to manipulate complex PHP data structures. A quick research found a few solutions, which all fell short in some way.
 
