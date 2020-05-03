@@ -1,6 +1,6 @@
 ## Modifying Data
 
-There are numerous calls available to modify a dataset. All calls set the modified flag of the affected dataset and its parents. If the master dataset is a file or another storage backend, and it was opened with the option `autosave` to `true`, altering data is committed to storage immediately, which may cause exceptions to be thrown because of write errors. See also `flush()` below.
+There are numerous calls available to modify a dataset. All calls set the modified flag of the affected dataset and its parents. If the master dataset is a file or another storage backend, and it was opened with the option `autoflush` to `true`, altering data is committed to storage immediately, which may cause exceptions to be thrown because of write errors. See also `flush()` below.
 
 ### Data By Reference
 
@@ -9,7 +9,7 @@ All dataset data is maintained and returned by reference. It is entirely possibl
 ```php
 function setModified(bool $modified = true) : void;
 ```
-A call to this method may cause the master dataset to be written to storage if its `autosave` options is set to `true`, possibly causing an exception to be thrown in case of write errors.
+A call to this method may cause the master dataset to be written to storage if its `autoflush` options is set to `true`, possibly causing an exception to be thrown in case of write errors.
 
 ### Setting it all
 
