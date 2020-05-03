@@ -15,6 +15,10 @@ require_once 'Exception.php';
  * of objects. If a property value is scalar, however, the entire object
  * is loaded as a single entry. If you save such an object, it will also
  * be saved as a single-element array.
+ * 
+ * This class supports file caching and the file-related options. Other
+ * storage backends can be implemented easily by overloading the Dataset
+ * functions _load() and _flush().
  */
 class File extends Dataset {
     /**
@@ -40,16 +44,20 @@ class File extends Dataset {
      * if no options were set.
      */
     static function getOptions() : array {
-        $options = [
-            'path' => $_SERVER['DOCUMENT_ROOT'].'/data/*.json',
-            'autoflush' => false,
-            'autodelete' => false,
-            'cache' => true,
-            'lazyLoad' => true,
-            'flags' => JSON_PRETTY_PRINT // JSON flags for saving	
-        ];
-        if (!self::$dfltOptions)
-            self::$dfltOptions = $options;
+        if (!self::$dfltOptions) {
+            // root folder
+            $dir = dirname(__DIR__);
+            $pos = strpos($dir, '/vendor/');
+            if ($pos !== false)
+                $dir = substr($dir, 0, $pos);
+                self::$dfltOptions = [
+                'path' => $dir.'/data/*.json',
+                'autoflush' => false,
+                'autodelete' => false,
+                'cache' => true,
+                'flags' => JSON_PRETTY_PRINT // JSON flags for saving	
+            ];
+        }
         return self::$dfltOptions;
     }
 
@@ -124,7 +132,7 @@ class File extends Dataset {
         $dir = $options['path'];
         if (strpos($dir, '*') === false)
             return [];
-        $pattern = '#^'.str_replace('*', basename($dir), '.+?').'$#';
+        $pattern = "/^".str_replace('*', '(.+?)', basename($dir))."$/";
         $dir = dirname($dir);
         $dir .= '/'.$path;
         $out = [];
@@ -133,8 +141,8 @@ class File extends Dataset {
                 if ($entry[0] !== '.') {
                     $path = $dir.'/'.$entry;
                     // Add only if the file name matches the path pattern
-                    if (is_file($path) && preg_match("\n$pattern\n", $entry))
-                        $out[] = pathinfo($entry, PATHINFO_FILENAME);
+                    if (is_file($path) && preg_match($pattern, $entry, $matches))
+                        $out[] = $matches[1];
                 }
             }
         }
@@ -142,17 +150,15 @@ class File extends Dataset {
     }
 
     /**
-     * Create new wrapper.
-     * @param string $path - the path to the JSON file
+     * Create a new File instance.
+     * @param string $path - the sub-path to the JSON file, will be merged with toptions['path']
      * @param array $options - an array of options
      */
     function __construct(string $path, array $options = []) {
         parent::__construct();        
         $this->options = array_merge(self::getOptions(), $options);
         $this->path = self::getPath($path, $options);
-        $this->data = null;
-        if (!$this->options['lazyLoad'])
-            $this->_load();
+        $this->_load();
     }
 
     /**
@@ -172,15 +178,13 @@ class File extends Dataset {
     }
 
     /**
-     * Overloadable: Load the data from disk. Note that if the
+     * Load the data from disk. Note that if the
      * data is an object, the property names will only become keys
      * if all property values are either arrays or objects. Otherwise,
      * the JSON will be stored as a single object.
      * @throws Exception if the loaded JSON is invalid
      */
-    protected function _load() : void {
-        if (!is_null($this->data))
-            return;
+    private function _load() : void {
         $json = is_file($this->path) ? @file_get_contents($this->path) : null;
         if ($json) {
             $json = @json_decode($json, false);

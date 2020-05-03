@@ -51,6 +51,7 @@ class Dataset implements \Countable {
      * @param array|object|Dataset $data the data to set
      * @param bool $modified the modified flag
      * @return Dataset myself
+     * @throws Exception when trying to set scalar data
      */
     function set($data, bool $modified = true) : Dataset {
         if ($data instanceof Dataset)
@@ -61,8 +62,7 @@ class Dataset implements \Countable {
             $this->data = $data;
         else
             throw new Exception("Cannot set scalar data");
-        $this->_setModified($modified);
-        $this->_autoflush();
+        $this->setModified($modified);
         return $this;
     }
 
@@ -70,25 +70,57 @@ class Dataset implements \Countable {
      * Re-index the dataset by using the value of a field as index.
      * If you ignore duplicates, duplicates will overwrite each other.
      * Note that this changes the current dataset only, not any parent
-     * or other datasets.
+     * or other datasets, so it should only be used with the top dataset.
      * 
-     * @param string $field the field to use as key
+     * @param string $field the field to use as key (dots allowed)
      * @param bool $ignoreDuplicates true to ignore duplicates
      * @return Dataset myself
      * @throws Exception on duplicate or missing keys
      */
     function reindex(string $field, bool $ignoreDuplicates = false) : Dataset {
         $data = [];
+        $keys = explode('.', $field);
         foreach ($this->data as $oldKey => &$record) {
-            $key = (is_object($record) ? $record->$field : $record[$field]) ?? null;
-            if (is_null($key))
-                throw new Exception("Record $oldKey does not have a field '$field'");
+            $key = $record;
+            foreach ($keys as $k) {
+                $key = (is_object($key) ? $key->$k : $key[$k]) ?? null;
+                if (is_null($key))
+                    throw new Exception("Record $oldKey does not have a field '$field'");
+            }
+            if (!is_scalar($key))
+                throw new Exception("Non-scalar value for record $oldKey's field $field");
             if (isset($data[$key]) && !$ignoreDuplicates)
                 throw new Exception("Duplicate key $key");
             $data[$key] = &$record;
         }
         $this->data = $data;
-        $this->_setModified(true);
+        $this->setModified(true);
+        return $this;
+    }
+
+    /**
+     * Re-index the dataset with the help of a callback. The callback
+     * receives three arguments: the current key, the record, and this instance,
+     * and returns the new index for that record.
+     * If you ignore duplicates, duplicates will overwrite each other.
+     * Note that this changes the current dataset only, not any parent
+     * or other datasets, so it should only be used with the top dataset.
+     * 
+     * @param callable $fn the callback with the current index, the recrod, and this Dataset instance; returns the new index
+     * @param bool $ignoreDuplicates true to ignore duplicates
+     * @return Dataset myself
+     * @throws Exception on duplicate or missing keys
+     */
+    function reindex_callback(callable $fn, bool $ignoreDuplicates = false) : Dataset {
+        $data = [];
+        foreach ($this->data as $oldKey => &$record) {
+            $key = $fn($oldKey, $record, $this);
+            if (isset($data[$key]) && !$ignoreDuplicates)
+                throw new Exception("Duplicate key $key");
+            $data[$key] = &$record;
+        }
+        $this->data = $data;
+        $this->setModified(true);
         return $this;
     }
 
@@ -103,18 +135,26 @@ class Dataset implements \Countable {
     /**
      * Set the dataset's modified flag. If set to true, it may
      * cause a flush operation if the "autoflush" option was
-     * set.
+     * set somewhere in the parent chain.
      * @param bool $flag
+     * @throws Exception on write errors if autoflush is enabled
      */
-    function setModified(bool $flag) : void {
-        $this->_setModified($flag);
-        $this->_autoflush();
+    function setModified(bool $flag = true) : void {
+        $autoFlush = false;
+        for ($set = $this; $set; $set = $set->parent) {
+            if (isset($set->options))
+                $autoFlush |= $set->options['autoflush'] === true;
+            $set->modified = $flag;
+        }
+        if ($autoFlush)
+            $this->flush();
     }
 
     /**
      * Execute a search. If the operator is "like", the value is a RegExp string.
-     * If you want to address the recrod by its key, use "*" as the field name 
-     * and "=" as the operator.
+     * If you want to address the record by its key, use "*" as the field name 
+     * and "=" as the operator. You can also test for the existence of a field
+     * by using = or != against the value null.
      * 
      * @param string $field - the data field (may contains dots for multiple levels)
      * @param string $op - the operator, one of =, != <, >, <=, >=, like
@@ -124,11 +164,10 @@ class Dataset implements \Countable {
     function where(string $field, string $op, $val) : Dataset {
         $set = new Dataset();
         $set->parent = $this;
-        $this->_load();
-        // Key access?
-        if ($field === '*' && $op === '=') {
+        // Quick access for direct index search
+        if ($field === '*' && ($op === '=' || $op === '==')) {
             if (isset($this->data[$val]))
-                $set->data[] = $this->data[$val];
+                $set->data[$val] = $this->data[$val];
             return $set;
         }
         // If the field is dotted, work on a subset of the field
@@ -141,22 +180,32 @@ class Dataset implements \Countable {
             $search = $this->select(implode('.', $keys));
 
         foreach ($search->data as $datakey => $dataval) {
-            if (is_object($dataval))
+            if ($field === '*')
+                $test = $datakey;
+            else if (is_object($dataval))
                 $test = $dataval->$field ?? null;
             else
                 $test = $dataval[$field] ?? null;
-            if (is_null($test))
-                continue;
-            switch ($op) {
-                case '==':
-                case '=': $res = $test == $val; break;
-                case '!=': $res = $test != $val; break;
-                case '<=': $res = $test <= $val; break;
-                case '>=': $res = $test >= $val; break;
-                case '<': $res = $test < $val; break;
-                case '>': $res = $test > $val; break;
-                case 'like': $res = preg_match($val, $test); break;
-                default: $res = false;
+            $res = false;
+            if (is_null($val)) {
+                switch ($op) {
+                    case '=':
+                    case '==':  $res = is_null($test); break;
+                    case '!=':  $res = !is_null($test); break;
+                }
+            }
+            else if (!is_null($test)) {
+                switch ($op) {
+                    case '==':
+                    case '=': $res = $test == $val; break;
+                    case '!=': $res = $test != $val; break;
+                    case '<=': $res = $test <= $val; break;
+                    case '>=': $res = $test >= $val; break;
+                    case '<': $res = $test < $val; break;
+                    case '>': $res = $test > $val; break;
+                    case 'like': $res = preg_match($val, $test) === 1; break;
+                    default: $res = false;
+                }
             }
             if ($res)
                 $set->data[$datakey] = &$this->data[$datakey];
@@ -187,7 +236,6 @@ class Dataset implements \Countable {
      * @return object|array|null
      */
     function first() : ?object {
-        $this->_load();
         if (empty($this->data))
             return null;
         return $this->data[array_key_first($this->data)];
@@ -198,7 +246,6 @@ class Dataset implements \Countable {
      * @return object|array|null
      */
     function last() : ?object {
-        $this->_load();
         if (empty($this->data))
             return null;
         return $this->data[array_key_last($this->data)];
@@ -213,7 +260,6 @@ class Dataset implements \Countable {
      * @return Dataset
      */
     function select(string $field) : DataSet {
-        $this->_load();
         $keys = explode('.', $field);
         $set = $this;
         while (!empty($keys))
@@ -226,7 +272,6 @@ class Dataset implements \Countable {
      * @return bool
      */
     function empty() : bool {
-        $this->_load();
         return empty($this->data);
     }
 
@@ -235,7 +280,6 @@ class Dataset implements \Countable {
      * @return int
      */
     function count() : int {
-        $this->_load();
         return count($this->data);
     }
 
@@ -245,7 +289,6 @@ class Dataset implements \Countable {
      * @return Dataset
      */
     function skip(int $n) : Dataset {
-        $this->_load();
         $set = new Dataset();
         $set->parent = $this;
         foreach ($this->data as $key => &$val) {
@@ -263,7 +306,6 @@ class Dataset implements \Countable {
      * @return Dataset
      */
     function limit(int $n) : Dataset {
-        $this->_load();
         $set = new Dataset();
         $set->parent = $this;
         foreach ($this->data as $key => &$val) {
@@ -281,7 +323,6 @@ class Dataset implements \Countable {
      * @return array
      */
     function keys() : array {
-        $this->_load();
         return array_keys($this->data);
     }
 
@@ -290,8 +331,7 @@ class Dataset implements \Countable {
      * @return array
      */
     function fetch() : array {
-        $this->_load();
-        return $this->data;
+         return $this->data;
     }
 
     /**
@@ -301,14 +341,13 @@ class Dataset implements \Countable {
      * @param mixed $data
      * @param mixed|null $key
      * @return Dataset myself
+     * @throws Exception on write errors if autoflush is enabled
      */
     function insert($data, ?string $key = null) : Dataset {
-        $this->_load();
         if (is_null($key))
             $key = max(array_keys($this->data));
         $this->data[$key] = &$data;
-        $this->_setModified(true);
-        $this->_autoflush();
+        $this->setModified(true);
         return $this;
     }
 
@@ -320,11 +359,11 @@ class Dataset implements \Countable {
      * nothing happens if the dataset is empty. Also, scalar dataset
      * values are not updated.
      * @param array|object $data
-     * @return Dataset
+     * @return Dataset myself
+     * @throws Exception on write errors if autoflush is enabled
      */
     function update($data) : Dataset {
         $data = (array) $data;
-        $this->_load();
         $modified = false;
         foreach ($this->data as &$val) {
             if (is_array($val)) {
@@ -338,15 +377,16 @@ class Dataset implements \Countable {
             }
         }
         if ($modified)
-            $this->_setModified($modified);
-        $this->_autoflush();
+            $this->setModified($modified);
         return $this;
     }
 
     /**
-     * Insert multiple records into the database.
+     * Insert multiple records into the database. Note that
+     * the keys of the array are ignored.
      * @param array $data
-     * @return Dataset
+     * @return Dataset myself
+     * @throws Exception on write errors if autoflush is enabled
      * @see update()
      */
     function insertMany(array $data) : Dataset {
@@ -355,7 +395,7 @@ class Dataset implements \Countable {
         foreach ($data as $record)
             $this->insert($record);
         $this->options['autoflush'] = $save;
-        $this->_autoflush();
+        $this->setModified(true);
         return $this;
     }
 
@@ -367,20 +407,20 @@ class Dataset implements \Countable {
      * the scalar value wins, and two objects or arrays are always assumed
      * to be equal.
      * 
-     * @param string $key - the key to sort by, may contain dots
+     * @param string $field - the field to sort by, may contain dots
      * @param string $mode - either 'desc' or 'asc'
      * @return Dataset myself
+     * @throws Exception on write errors if autoflush is enabled
      */
-    function sort(string $key = '', string $mode = 'asc') : Dataset {
-        $this->_load();
-        if ($key === '*') {
+    function sort(string $field = '', string $mode = 'asc') : Dataset {
+        if ($field === '*') {
             if ($mode === 'asc')
                 ksort($this->data);
             else
                 krsort($this->data);
         }
         else {
-            $key = explode('.', $key);
+            $key = explode('.', $field);
             uasort($this->data, function($a, $b) use ($mode, $key) {
                 $aa = $a;
                 $bb = $b;
@@ -401,12 +441,11 @@ class Dataset implements \Countable {
                 else if (!is_scalar($rb))
                     $res = -1;
                 else
-                    $res = strcmp((string) $ra, (string) $rb);
+                    $res = $ra <=> $rb;
                 return ($mode === 'desc') ? -$res : $res;
             });
         }
-        $this->_setModified(true);
-        $this->_autoflush();
+        $this->setModified(true);
         return $this;
     }
 
@@ -416,6 +455,7 @@ class Dataset implements \Countable {
      * field only.
      * @param string $field the field to delete (opt)
      * @return Dataset myself
+     * @throws Exception on write errors if autoflush is enabled
      */
     function delete(string $field = null) : Dataset {
         if (!is_null($field)) {
@@ -431,51 +471,28 @@ class Dataset implements \Countable {
                 foreach ($keys as $k)
                     unset($ds->data[$k]);
             }
+            $this->data = [];
         }
-        $this->_setModified(true);
-        $this->_autoflush();
+        $this->setModified(true);
         return $this;
     }
 
     /**
      * Flush the dataset regardsless of its modified state.
+     * @throws Exception on write errors
      */
     function flush() : void {
-        for ($set = $this; $set; $set = $set->parent) {
+        for ($set = $this; $set->parent; $set = $set->parent)
             $set->_flush();
-            $set->modified = false;
-        }
+        // did not throw, so we are OK
+        $this->setModified(false);
     }
 
     /**
-     * Lazy loader: Load the data if the $data member is null. 
-     */
-    protected function _load() : void {
-        if (is_null($this->data))
-            $this->data = [];
-    }
-
-    /**
-     * Overloadable: flush the data to disk.
+     * Overloadable: flush the data to storage.
+     * @throws Exception on write errors if overloaded
      */
     protected function _flush(): void {
-    }
-
-    /**
-     * Helper: set the modified flag at this instance and all parents.
-     * @param bool $flag
-     */
-    protected function _setModified(bool $flag) : void {
-        for ($ds = $this; $ds; $ds = $ds->parent)
-            $ds->modified = $flag;
-    }
-
-    /**
-     * Helper: flush the dataset if autoflush is enabled.
-     */
-    private function _autoflush() : void {
-        if ($this->modified && $this->options['autoflush'])
-            $this->flush();
     }
 }
 

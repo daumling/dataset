@@ -43,4 +43,27 @@ class DataSubset extends Dataset {
         throw new Exception("Cannot insert into a select() dataset");
         return $this;
     }
+
+    /**
+     * Delete the dataset and remove it from its parents.
+     * If a field name is given (no dots!), then delete that
+     * field only. This overload deletes the field from the parents.
+     * @param string $field the field to delete (opt)
+     * @return Dataset myself
+     * @throws Exception on write errors if autoflush is enabled
+     */
+    function delete(string $field = null) : Dataset {
+        if (!is_null($field))
+            return parent::delete($field);
+        foreach ($this->data as $key => $ignore) {
+            $val = $this->parent->data[$key];
+            if (is_array($val))
+                unset($val[$this->index]);
+            else
+                unset($val->{$this->index});
+        }
+        $this->data = [];
+        $this->setModified(true);
+        return $this;
+    }
 }

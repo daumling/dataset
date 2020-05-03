@@ -1,8 +1,7 @@
 <?php
 
 /**
- * Simple example with OR: find all residents
- * of New York and Texas
+ * Delete data: Delete the gender from all records
  */
 include '../src/Dataset.php';
 use \Daumling\Dataset\File as DB;
@@ -12,11 +11,13 @@ DB::setOptions([
 ]);
 
 $table = DB::get('addresses');
-$set = $table
-    ->where('address.state', '=', 'New York')
-    ->orWhere('address.state', '=', 'Texas');
+$table->delete('gender');
 
-echo count($set)." residents of NY or TX found\n";
+// check the deletion
+$set = $table->where('gender', '!=', '');
 
+echo count($set). " records found\n";
+
+// display
 foreach ($set->fetch() as $record)
     echo json_encode($record, JSON_PRETTY_PRINT)."\n";

@@ -15,8 +15,5 @@ $set = $table
     ->sort('last_name')
     ->limit(5);
 
-if (empty($set))
-    echo "No data\n";
-// display
-else foreach ($set->fetch() as $record)
+foreach ($set->fetch() as $record)
     echo json_encode($record, JSON_PRETTY_PRINT)."\n";

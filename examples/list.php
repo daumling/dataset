@@ -12,10 +12,7 @@ DB::setOptions([
 ]);
 
 $tables = DB::list();
+
 echo count($tables)." tables found\n";
 
-if (empty($tables))
-    echo "No data\n";
-// display
-else
-    echo implode(' ', $tables)."\n";
+echo implode(' ', $tables)."\n";

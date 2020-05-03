@@ -16,15 +16,12 @@ $set = $table->where('age', '>', 65);
 echo count($set)." records with age > 65 found\n";
 // Now get all females
 $female = $set->where('gender', '=', 'Female');
-echo count($female)." females found\n";
+echo count($female)." females > 65 found\n";
 
 // A different way to write this
 $female = $table
     ->where('age', '>', 65)
     ->where('gender', '=', 'Female');
 
-if (empty($female))
-    echo "No data\n";
-// display
-else foreach ($female->fetch() as $record)
+foreach ($female->fetch() as $record)
     echo json_encode($record, JSON_PRETTY_PRINT)."\n";
