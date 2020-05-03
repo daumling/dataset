@@ -1,9 +1,9 @@
 ---
 title: Searching
-nav_order: 2
+nav_order: 3
 ---
 
-## Searching
+# Searching
 
 Searching a table always returns a new Dataset with the matching subset of the original dataset. You can use the usual comparison operators to search. Search via regular expressions is supported with the `like` operator, and it is possible to check for the existence of a data field by comparing it to `null`.
 

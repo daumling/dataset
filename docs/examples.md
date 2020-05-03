@@ -1,6 +1,28 @@
+---
+title: Examples
+nav_order: 6
+---
+
 # Examples
 
-These examples work with sample data, courtesy by [Mockaroo](https://mockaroo.com/). This data are 100 mock person records with first and last name, email, age and gender, plus an address field with stree, zip, city, and state fields. The data is located at `data/addresses.json`.
+The examples in the `/examples` folder work with sample data, courtesy by [Mockaroo](https://mockaroo.com/). This data is 100 mock person records with first and last name, email, age and gender, plus an address field with street, zip, city, and state fields. The data is located at `data/addresses.json`.
+
+This is a sample data record:
+```json
+{
+    "first_name": "Leela",
+    "last_name": "Blackesland",
+    "email": "lblackesland0@skyrock.com",
+    "gender": "Female",
+    "age": 22,
+    "address": {
+        "street": "03 Swallow Alley",
+        "zip": "85743",
+        "city": "Tucson",
+        "state": "Arizona"
+    }
+}
+```
 
 ## simple.php
 

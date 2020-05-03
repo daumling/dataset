@@ -1,9 +1,9 @@
 ---
 title: Accessing the Data
-nav_order: 3
+nav_order: 4
 ---
 
-## Accessing the Data
+# Accessing the Data
 
 There are several ways to access the dataset's data. Note that all data is returned by reference, so altering the data is entirely possible.
 

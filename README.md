@@ -1,9 +1,4 @@
----
-title: Datasets
-nav_order: 1
----
-
-# Datasets
+# php-datasets
 
 **See the entire documentation at https://daumling.github.io/php-dataset/**!
 
@@ -28,9 +23,7 @@ Here is an example. Assuming a JSON database of persons with the following examp
     "name" : "John Smith",
     "age": 44,
     "address" : {
-        "street" : "1234 Wonder St",
-        "zip" : 94016,
-        "city" : "San Jose",
+        ...
         "state" : "CA"
     }
 }
@@ -44,11 +37,3 @@ Or if you only need NY retirees:
 ```php
 foreach ($file->where('age', '>=', 65)->where('address.state' '=', 'NY')->fetch() as $record) ...
 ```
-
-Some terminology if you are going to read the docs:
-
-The **master dataset** is the top-level dataset containing the full data, like a file or a dataset that you created.
-
-**Child datasets** are the results of searches, or limits to the dataset.
-
-**Parent datasets** are the datasets that a search result originates from.
