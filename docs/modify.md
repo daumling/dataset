@@ -1,3 +1,8 @@
+---
+title: Modifying Data
+nav_order: 4
+---
+
 ## Modifying Data
 
 There are numerous calls available to modify a dataset. All calls set the modified flag of the affected dataset and its parents. If the master dataset is a file or another storage backend, and it was opened with the option `autoflush` to `true`, altering data is committed to storage immediately, which may cause exceptions to be thrown because of write errors. See also `flush()` below.
@@ -9,7 +14,7 @@ All dataset data is maintained and returned by reference. It is entirely possibl
 ```php
 function setModified(bool $modified = true) : void;
 ```
-A call to this method may cause the master dataset to be written to storage if its `autoflush` options is set to `true`, possibly causing an exception to be thrown in case of write errors.
+A call to this method may cause the master dataset to be written to storage if its `autoflush` option is set to `true`, possibly causing an exception to be thrown in case of write errors.
 
 ### Setting it all
 
@@ -58,7 +63,9 @@ The key may contain dots to address a sub-field. The return value is the dataset
 ```php
 function delete(string $field = null) : Dataset;
 ```
-Delete the entire dataset. After this call, the dataset is empty, and its records are removed from all parents.
+Delete a field or the entire dataset. 
+
+If no field name is supplied, after this call, the dataset is empty, and its records are removed from all parents.
 
 If the dataset is the result of a `select()` call, only the field that the dataset was selected over is removed from the parents. If you, for example, have records with an `age` field, this call removes that field from the master dataset:
 
@@ -76,7 +83,7 @@ Sometimes, a re-index may be needed, especially for large datasets. Imagine an a
 function reindex(string $field = null, bool $ignoreDuplicates = false) : Dataset;
 function reindex_callback(callable $cb, bool $ignoreDuplicates = false) : Dataset;
 ```
-These two methods allow for the re-indexing, which sets the key of each record to the value of the given field. You can choose to ignore duplicates, which causes the records to be overwriten is the same index appears twice. The default is to throw an exception for duplicate index values.
+These two methods allow for the re-indexing, which sets the key of each record to the value of the given field. You can choose to ignore duplicates, which causes the records to be overwritten is the same index appears twice. The default is to throw an exception for duplicate index values.
 
 The second method ifs for more complex reindex operations. The callback has the following signature:
 ```php

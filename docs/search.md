@@ -1,3 +1,8 @@
+---
+title: Searching
+nav_order: 2
+---
+
 ## Searching
 
 Searching a table always returns a new Dataset with the matching subset of the original dataset. You can use the usual comparison operators to search. Search via regular expressions is supported with the `like` operator, and it is possible to check for the existence of a data field by comparing it to `null`.
@@ -30,7 +35,7 @@ To access the result of a search, use the dataset's `fetch()` method.
 
 The `$op` parameter is the operator to use, which can be one of `=` (or `==`), `!=`, `<`, `>`, `<=`, `>=`, or `like`, and the `$value` field is the value to compare against.
 
-The `like` operator expectes the value to be a regular expression string. Here is an example of finding all records whose city starts with "San ":
+The `like` operator expects the value to be a regular expression string. Here is an example of finding all records whose city starts with "San ":
 
 ```php
 $set = $table->where('address.city' 'like', '/^San /');

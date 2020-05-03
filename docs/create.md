@@ -1,3 +1,7 @@
+---
+title: Creating a Dataset
+nav_order: 2
+---
 ## Creating a Dataset
 
 it is always possible to create a dataset with an existing structure:
@@ -9,6 +13,8 @@ The data is expected to be an array. If an object is used, it is cast to an arra
 ## Files
 
 The usual way to create a dataset is to use the `File` class. This class handles JSON files, caching of these files, and global as well as file specific options.
+
+Due to the nature of JSON, associative arrays are stored as objects. If an object is loaded, the code checks the object's properties for being arrays or objects. If all property values are non-scalar, the object is loaded as an associative array, mimicking indexed storage of objects. If at least one property value is scalar, however, the entire object is loaded as a single entry. If you save such an object, it will be saved as a single-element array, producing slightly different data on disk than before.
 
 ### Options
 
@@ -22,11 +28,11 @@ The File class suports options, which can either be set globally or passed in as
     'flags' => JSON_PRETTY_PRINT // JSON flags for saving	
 ];
 ```
-Actually the `path` option is the full path of your project's root folder plus `/data/*.json`.
+Actually the `path` option is the full path of your project's root folder plus `/data/*.json`. You should always set this option to point to your file set before working with Datasets.
 
   * `path`: The path setting is a placeholder for the path submitted to the File constructor. That constructor takes just the name of the file. The constructor replaces the asterisk in the `path` option with whatever you submit as file name; subfolders are OK as well, and will be created during saving if they do not exist.
   * `autoflush`: If this setting is `true`, any modifications to the dataset will be written to the file immediately.
-  * `autodelete`: If `true`, writing an empoty datasets causes the file to be deleted.
+  * `autodelete`: If `true`, writing an empty dataset causes the file to be deleted.
   * `cache`: If `true`, the File object will be cached, thus reducing disk I/O.
   * `flags`: These flags will be supplied to the `json_encode()` function when the data is saved to disk.
 
