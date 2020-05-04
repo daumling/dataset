@@ -15,7 +15,7 @@ This Dataset implementation offers
 
 Each search operation returns a new Dataset containing the results of the search only. The data of these child datasets is always stored by reference, which saves memory and makes updates easy. Of course, accidential updates may go unnoticed, so this concept needs to be used with caution.
 
-Almost all Dataset methods return a Dataset instance, either a new dataset, of the dataset itself, so calls can be chained easily. Datasets containing intermediate results may be saved for later use.
+Almost all Dataset methods return a Dataset instance, either a new dataset, or the dataset itself, so calls can be chained easily. Datasets containing intermediate results may be saved for later use.
 
 Here is an example. Assuming a JSON database of persons with the following example record:
 ```json

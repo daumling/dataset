@@ -146,7 +146,7 @@ class Dataset implements \Countable {
                 $autoFlush |= $set->options['autoflush'] === true;
             $set->modified = $flag;
         }
-        if ($autoFlush)
+        if ($autoFlush && $flag)
             $this->flush();
     }
 
