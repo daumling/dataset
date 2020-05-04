@@ -3,8 +3,7 @@
     "description": "A JSON-based, SQL-like manipulation of structured PHP data",
     "type": "library",
     "homepage": "https://daumling.github.io/php-dataset/",
-    "keywords": ["php", "php7.2", "dataset", "josn", "sql"],
-    "version": "1.0.1",
+    "keywords": ["php", "php7.2", "dataset", "json", "sql"],
     "require": {
         "php": ">=7.2.0"
     },
