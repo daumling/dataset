@@ -272,7 +272,7 @@ class Dataset implements \Countable {
      * @return bool
      */
     function empty() : bool {
-        return empty($this->data);
+        return count($this->data) == 0;
     }
 
     /**
@@ -478,11 +478,11 @@ class Dataset implements \Countable {
     }
 
     /**
-     * Flush the dataset regardsless of its modified state.
+     * Flush the dataset regardless of its modified state.
      * @throws Exception on write errors
      */
     function flush() : void {
-        for ($set = $this; $set->parent; $set = $set->parent)
+        for ($set = $this; $set; $set = $set->parent)
             $set->_flush();
         // did not throw, so we are OK
         $this->setModified(false);
